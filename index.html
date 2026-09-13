@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16261F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mis Finanzas">
+<title>Mis Finanzas — Libro de cuentas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #EEF1EC;
+    --paper-raised: #F6F8F5;
+    --ink: #16261F;
+    --ink-soft: #4B5A52;
+    --line: #C7CFC5;
+    --line-strong: #9FAB9F;
+    --expense: #A6612C;
+    --expense-soft: #EFDFCF;
+    --income: #2F6F62;
+    --income-soft: #DCEBE6;
+    --goal: #4C6B87;
+    --goal-soft: #DDE6EE;
+    --danger: #A33B3B;
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;padding:0;}
+  html,body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:640px;
+    margin:0 auto;
+    min-height:100vh;
+    background:var(--paper);
+    padding-bottom:88px;
+  }
+  /* Masthead */
+  header.masthead{
+    padding:28px 20px 18px;
+    border-bottom:1px solid var(--line-strong);
+  }
+  .masthead-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:18px;
+  }
+  .masthead-label{
+    font-size:12px;
+    letter-spacing:.02em;
+    color:var(--ink-soft);
+  }
+  .masthead-date{
+    font-size:12px;
+    color:var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .balance-row{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+  }
+  .balance-figure{
+    font-family:'Fraunces', serif;
+    font-optical-sizing:auto;
+    font-weight:600;
+    font-size:44px;
+    line-height:1;
+    letter-spacing:-.01em;
+  }
+  .balance-figure.negative{ color:var(--danger); }
+  .balance-sub{
+    font-size:12px;
+    color:var(--ink-soft);
+    margin-top:6px;
+  }
+  .mini-stats{
+    display:flex;
+    gap:22px;
+    margin-top:16px;
+  }
+  .mini-stat{ font-size:12px; color:var(--ink-soft); }
+  .mini-stat b{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    color:var(--ink);
+    font-weight:500;
+    margin-top:2px;
+  }
+  .mini-stat.exp b{ color:var(--expense); }
+  .mini-stat.inc b{ color:var(--income); }
+
+  /* Tabs */
+  nav.tabs{
+    display:flex;
+    border-bottom:1px solid var(--line-strong);
+    background:var(--paper);
+    position:sticky;
+    top:0;
+    z-index:5;
+  }
+  nav.tabs button{
+    flex:1;
+    background:none;
+    border:none;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px;
+    color:var(--ink-soft);
+    padding:12px 4px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+  }
+  nav.tabs button.active{
+    color:var(--ink);
+    border-bottom-color:var(--ink);
+    font-weight:500;
+  }
+
+  section.view{ display:none; padding:18px 20px 8px; }
+  section.view.active{ display:block; }
+
+  h2.section-title{
+    font-family:'Fraunces', serif;
+    font-weight:500;
+    font-size:19px;
+    margin:6px 0 14px;
+  }
+
+  /* Ledger rows (movimientos) */
+  .ledger{ border-top:1px solid var(--line); }
+  .ledger-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .ledger-row .swatch{
+    width:8px;height:8px;border-radius:50%;
+    flex-shrink:0;
+  }
+  .ledger-row .details{ flex:1; min-width:0; }
+  .ledger-row .cat{ font-size:14px; font-weight:500; }
+  .ledger-row .meta{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .ledger-row .amt{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    white-space:nowrap;
+  }
+  .ledger-row .amt.exp{ color:var(--expense); }
+  .ledger-row .amt.inc{ color:var(--income); }
+  .ledger-row .del{
+    background:none;border:none;color:var(--ink-soft);
+    font-size:16px; cursor:pointer; padding:4px;
+    opacity:.5;
+  }
+  .empty-note{
+    color:var(--ink-soft);
+    font-size:13px;
+    padding:24px 0;
+    text-align:center;
+    border-top:1px solid var(--line);
+  }
+
+  /* Bars (resumen) */
+  .bar-row{ margin-bottom:14px; }
+  .bar-row .bar-label{
+    display:flex; justify-content:space-between;
+    font-size:13px; margin-bottom:5px;
+  }
+  .bar-row .bar-label span:last-child{ font-family:'IBM Plex Mono', monospace; color:var(--ink-soft); }
+  .bar-track{
+    height:7px;
+    background:var(--line);
+    border-radius:1px;
+    overflow:hidden;
+  }
+  .bar-fill{ height:100%; }
+
+  .divider{ border:none; border-top:1px solid var(--line-strong); margin:26px 0 18px; }
+
+  /* Goals */
+  .goal-card{
+    padding:16px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .goal-top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
+  .goal-name{ font-family:'Fraunces', serif; font-size:17px; font-weight:500; }
+  .goal-figs{ font-size:12px; font-family:'IBM Plex Mono', monospace; color:var(--ink-soft); }
+  .goal-track{ height:9px; background:var(--goal-soft); border-radius:1px; overflow:hidden; margin-bottom:8px;}
+  .goal-fill{ height:100%; background:var(--goal); }
+  .goal-actions{ display:flex; gap:8px; }
+  .goal-actions button{
+    font-size:12px;
+    padding:6px 10px;
+    border:1px solid var(--line-strong);
+    background:var(--paper-raised);
+    border-radius:var(--radius);
+    cursor:pointer;
+    color:var(--ink);
+  }
+  .goal-actions button.del{ color:var(--danger); border-color:var(--danger); background:none; }
+
+  /* Categories manager */
+  .cat-row{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .cat-row input[type=text]{ flex:1; min-width:0; }
+  .cat-row input[type=number]{ width:96px; flex-shrink:0; }
+  .cat-row .budget-label{ font-size:11px; color:var(--ink-soft); flex-shrink:0; }
+  .cat-row .swatch-btn{
+    width:16px;height:16px;border-radius:50%;
+    border:1px solid var(--line-strong); cursor:pointer;
+  }
+
+  /* Forms */
+  label.field{ display:block; margin-bottom:14px; }
+  label.field span{ display:block; font-size:12px; color:var(--ink-soft); margin-bottom:5px; }
+  input, select, textarea{
+    width:100%;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:15px;
+    padding:10px 11px;
+    border:1px solid var(--line-strong);
+    border-radius:var(--radius);
+    background:var(--paper-raised);
+    color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--ink);
+    outline-offset:1px;
+  }
+  .seg{
+    display:flex;
+    border:1px solid var(--line-strong);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .seg button{
+    flex:1;
+    padding:10px 0;
+    background:var(--paper-raised);
+    border:none;
+    font-size:13px;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-right:1px solid var(--line-strong);
+  }
+  .seg button:last-child{ border-right:none; }
+  .seg button.active{ background:var(--ink); color:var(--paper); font-weight:500; }
+  .primary-btn{
+    width:100%;
+    padding:13px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:var(--radius);
+    font-size:14px;
+    font-weight:500;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  .ghost-btn{
+    width:100%;
+    padding:11px;
+    background:none;
+    border:1px dashed var(--line-strong);
+    color:var(--ink-soft);
+    border-radius:var(--radius);
+    font-size:13px;
+    cursor:pointer;
+    margin-top:10px;
+  }
+
+  /* FAB */
+  .fab{
+    position:fixed;
+    bottom:22px; left:50%;
+    transform:translateX(-50%);
+    width:min(600px, calc(100% - 40px));
+    display:flex;
+  }
+  .fab button{
+    flex:1;
+    padding:15px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:4px;
+    font-size:14px;
+    font-weight:500;
+    letter-spacing:.01em;
+    box-shadow:0 6px 18px rgba(22,38,31,.28);
+    cursor:pointer;
+  }
+
+  /* Modal */
+  .modal-backdrop{
+    position:fixed; inset:0;
+    background:rgba(22,38,31,.45);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:20;
+  }
+  .modal-backdrop.open{ display:flex; }
+  .modal{
+    background:var(--paper);
+    width:100%;
+    max-width:640px;
+    border-radius:14px 14px 0 0;
+    padding:22px 20px 26px;
+    max-height:88vh;
+    overflow-y:auto;
+  }
+  .modal-head{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:18px;
+  }
+  .modal-head h3{
+    font-family:'Fraunces', serif; font-weight:500; font-size:19px; margin:0;
+  }
+  .modal-head button{
+    background:none;border:none;font-size:20px;color:var(--ink-soft);cursor:pointer;
+  }
+  .filter-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; margin-bottom:6px;}
+  .filter-chip{
+    flex-shrink:0;
+    padding:6px 12px;
+    border:1px solid var(--line-strong);
+    border-radius:99px;
+    font-size:12px;
+    color:var(--ink-soft);
+    background:var(--paper-raised);
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .filter-chip.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+
+  .backup-row{ display:flex; gap:10px; margin-top:4px;}
+  .backup-row button{ flex:1; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="masthead">
+    <div class="masthead-top">
+      <span class="masthead-label">MIS FINANZAS</span>
+      <span class="masthead-date" id="todayLabel"></span>
+    </div>
+    <div class="balance-row">
+      <div>
+        <div class="balance-figure" id="balanceFigure">$0.00</div>
+        <div class="balance-sub">Balance del mes</div>
+      </div>
+    </div>
+    <div class="mini-stats">
+      <div class="mini-stat inc">Ingresos<b id="miniIncome">$0.00</b></div>
+      <div class="mini-stat exp">Gastos<b id="miniExpense">$0.00</b></div>
+      <div class="mini-stat">Tarjeta / Efectivo<b id="miniMethod">—</b></div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-view="resumen" class="active">Resumen</button>
+    <button data-view="semana">Semana</button>
+    <button data-view="movimientos">Movimientos</button>
+    <button data-view="metas">Metas</button>
+    <button data-view="categorias">Categorías</button>
+  </nav>
+
+  <!-- RESUMEN -->
+  <section class="view active" id="view-resumen">
+    <h2 class="section-title">Gastos por categoría — este mes</h2>
+    <div id="barList"></div>
+    <div class="empty-note" id="barEmpty" style="display:none;">Aún no registras gastos este mes.</div>
+    <hr class="divider">
+    <h2 class="section-title">Últimos movimientos</h2>
+    <div class="ledger" id="recentLedger"></div>
+  </section>
+
+  <!-- SEMANA -->
+  <section class="view" id="view-semana">
+    <h2 class="section-title">Semana del <span id="weekRangeLabel"></span></h2>
+
+    <div class="mini-stats" style="margin-bottom:20px;">
+      <div class="mini-stat inc">Ingresos semana<b id="weekIncome">$0.00</b></div>
+      <div class="mini-stat exp">Gastos semana<b id="weekExpense">$0.00</b></div>
+    </div>
+
+    <h2 class="section-title">Presupuestos semanales</h2>
+    <div id="budgetList"></div>
+    <div class="empty-note" id="budgetEmpty" style="display:none;">Asígnale un tope semanal a tus categorías desde la pestaña Categorías.</div>
+
+    <div id="weekCloseCard" style="margin-top:20px; padding:16px; border:1px solid var(--line-strong); border-radius:6px; background:var(--paper-raised);">
+      <div style="font-size:13px; color:var(--ink-soft); margin-bottom:6px;">Sobrante de tus presupuestos esta semana</div>
+      <div style="font-family:'Fraunces',serif; font-size:26px; font-weight:600;" id="weekSurplus">$0.00</div>
+      <button class="ghost-btn" id="assignSurplusBtn" style="margin-top:12px;">Guardar sobrante en una meta</button>
+    </div>
+
+    <hr class="divider">
+
+    <h2 class="section-title">Verificar efectivo</h2>
+    <div style="padding:16px; border:1px solid var(--line-strong); border-radius:6px; background:var(--paper-raised); margin-bottom:14px;">
+      <label class="field" style="margin-bottom:10px;">
+        <span>Efectivo con el que empezaste esta semana</span>
+        <input type="number" id="weekCashStartInput" step="0.01" inputmode="decimal">
+      </label>
+      <button class="ghost-btn" id="saveWeekCashStartBtn" style="margin-top:0;">Guardar efectivo inicial</button>
+    </div>
+    <div style="font-size:13px; color:var(--ink-soft);">Efectivo esperado ahora mismo: <b id="expectedCash" style="font-family:'IBM Plex Mono',monospace; color:var(--ink);"></b></div>
+    <label class="field" style="margin-top:14px;">
+      <span>Efectivo que tienes contado en la mano</span>
+      <input type="number" id="cashCountInput" step="0.01" inputmode="decimal">
+    </label>
+    <button class="primary-btn" id="checkCashBtn">Comparar</button>
+    <div id="cashResult" style="margin-top:12px; font-size:14px;"></div>
+  </section>
+
+  <!-- MOVIMIENTOS -->
+  <section class="view" id="view-movimientos">
+    <h2 class="section-title">Todos los movimientos</h2>
+    <div class="filter-row" id="filterRow">
+      <span class="filter-chip active" data-filter="todos">Todos</span>
+      <span class="filter-chip" data-filter="gasto">Gastos</span>
+      <span class="filter-chip" data-filter="ingreso">Ingresos</span>
+    </div>
+    <div class="ledger" id="fullLedger"></div>
+    <div class="empty-note" id="fullEmpty" style="display:none;">No hay movimientos con este filtro.</div>
+  </section>
+
+  <!-- METAS -->
+  <section class="view" id="view-metas">
+    <h2 class="section-title">Metas de ahorro</h2>
+    <div id="goalsList"></div>
+    <div class="empty-note" id="goalsEmpty" style="display:none;">Aún no tienes metas de ahorro.</div>
+    <button class="ghost-btn" id="addGoalBtn">+ Nueva meta de ahorro</button>
+  </section>
+
+  <!-- CATEGORIAS -->
+  <section class="view" id="view-categorias">
+    <h2 class="section-title">Categorías</h2>
+    <div id="catList"></div>
+    <button class="ghost-btn" id="addCatBtn">+ Nueva categoría</button>
+    <hr class="divider">
+    <h2 class="section-title">Respaldo de tus datos</h2>
+    <div class="backup-row">
+      <button class="primary-btn" id="exportBtn" style="margin-top:0;">Exportar</button>
+      <button class="ghost-btn" id="importBtn" style="margin-top:0;">Importar</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" style="display:none;">
+  </section>
+
+  <div class="fab">
+    <button id="openAddModal">+ Registrar movimiento</button>
+  </div>
+</div>
+
+<!-- Modal: nuevo movimiento -->
+<div class="modal-backdrop" id="modalMovimiento">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Nuevo movimiento</h3>
+      <button data-close>&times;</button>
+    </div>
+    <label class="field">
+      <span>Tipo</span>
+      <div class="seg" id="typeSeg">
+        <button type="button" data-val="gasto" class="active">Gasto</button>
+        <button type="button" data-val="ingreso">Ingreso</button>
+      </div>
+    </label>
+    <label class="field" id="methodField">
+      <span id="methodLabel">Método de pago</span>
+      <div class="seg" id="methodSeg">
+        <button type="button" data-val="tarjeta" class="active">Tarjeta</button>
+        <button type="button" data-val="efectivo">Efectivo</button>
+      </div>
+    </label>
+    <label class="field">
+      <span>Monto</span>
+      <input type="number" id="amountInput" placeholder="0.00" step="0.01" inputmode="decimal">
+    </label>
+    <label class="field">
+      <span>Categoría</span>
+      <select id="categorySelect"></select>
+    </label>
+    <label class="field">
+      <span>Fecha</span>
+      <input type="date" id="dateInput">
+    </label>
+    <label class="field">
+      <span>Nota (opcional)</span>
+      <input type="text" id="noteInput" placeholder="Ej. súper de la semana">
+    </label>
+    <button class="primary-btn" id="saveMovBtn">Guardar</button>
+  </div>
+</div>
+
+<!-- Modal: nueva meta -->
+<div class="modal-backdrop" id="modalMeta">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Nueva meta de ahorro</h3>
+      <button data-close>&times;</button>
+    </div>
+    <label class="field">
+      <span>Nombre de la meta</span>
+      <input type="text" id="goalNameInput" placeholder="Ej. Fondo de emergencia">
+    </label>
+    <label class="field">
+      <span>Monto objetivo</span>
+      <input type="number" id="goalTargetInput" placeholder="0.00" step="0.01" inputmode="decimal">
+    </label>
+    <label class="field">
+      <span>Ya ahorrado (opcional)</span>
+      <input type="number" id="goalCurrentInput" placeholder="0.00" step="0.01" inputmode="decimal">
+    </label>
+    <button class="primary-btn" id="saveGoalBtn">Crear meta</button>
+  </div>
+</div>
+
+<!-- Modal: aportar a meta -->
+<div class="modal-backdrop" id="modalAporte">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Agregar a la meta</h3>
+      <button data-close>&times;</button>
+    </div>
+    <label class="field">
+      <span>Monto a agregar</span>
+      <input type="number" id="aporteInput" placeholder="0.00" step="0.01" inputmode="decimal">
+    </label>
+    <button class="primary-btn" id="saveAporteBtn">Agregar</button>
+  </div>
+</div>
+
+<!-- Modal: guardar sobrante -->
+<div class="modal-backdrop" id="modalSurplus">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Guardar sobrante</h3>
+      <button data-close>&times;</button>
+    </div>
+    <label class="field">
+      <span>Monto a guardar</span>
+      <input type="number" id="surplusAmountInput" step="0.01" inputmode="decimal">
+    </label>
+    <label class="field">
+      <span>Meta destino</span>
+      <select id="surplusGoalSelect"></select>
+    </label>
+    <button class="primary-btn" id="confirmSurplusBtn">Guardar</button>
+  </div>
+</div>
+
+<!-- Modal: nueva categoría -->
+<div class="modal-backdrop" id="modalCategoria">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Nueva categoría</h3>
+      <button data-close>&times;</button>
+    </div>
+    <label class="field">
+      <span>Nombre</span>
+      <input type="text" id="catNameInput" placeholder="Ej. Mascotas">
+    </label>
+    <label class="field">
+      <span>Color</span>
+      <input type="color" id="catColorInput" value="#A6612C" style="height:44px; padding:4px;">
+    </label>
+    <button class="primary-btn" id="saveCatBtn">Crear categoría</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "finanzas_v1";
+  const DEFAULT_CATEGORIES = [
+    {id:"comida", name:"Comida", color:"#A6612C"},
+    {id:"transporte", name:"Transporte", color:"#4C6B87"},
+    {id:"vivienda", name:"Vivienda", color:"#6B5B95"},
+    {id:"servicios", name:"Servicios", color:"#8A8A5C"},
+    {id:"entretenimiento", name:"Entretenimiento", color:"#B4557A"},
+    {id:"salud", name:"Salud", color:"#2F6F62"},
+    {id:"educacion", name:"Educación", color:"#3D6EA5"},
+    {id:"otros", name:"Otros", color:"#8A8A8A"},
+  ];
+
+  function loadState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) return JSON.parse(raw);
+    }catch(e){ console.error("No se pudo leer el almacenamiento:", e); }
+    return { transactions: [], categories: DEFAULT_CATEGORIES.slice(), goals: [] };
+  }
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }catch(e){ console.error("No se pudo guardar:", e); alert("No se pudo guardar el cambio en este dispositivo."); }
+  }
+
+  let state = loadState();
+  if(!state.categories || !state.categories.length) state.categories = DEFAULT_CATEGORIES.slice();
+  if(!state.transactions) state.transactions = [];
+  if(!state.goals) state.goals = [];
+  if(!state.budgets) state.budgets = {};
+  if(!state.weekCashStart) state.weekCashStart = {};
+  if(!state.assignedWeeks) state.assignedWeeks = {};
+
+  const fmt = new Intl.NumberFormat('es-MX', {style:'currency', currency:'MXN'});
+  const todayISO = () => new Date().toISOString().slice(0,10);
+
+  // ---------- Tabs ----------
+  const tabs = document.querySelectorAll('nav.tabs button');
+  tabs.forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      tabs.forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('section.view').forEach(v=>v.classList.remove('active'));
+      document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    });
+  });
+
+  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('es-MX', {day:'numeric', month:'long', year:'numeric'});
+
+  // ---------- Modales ----------
+  function openModal(id){ document.getElementById(id).classList.add('open'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('[data-close]').forEach(btn=>{
+    btn.addEventListener('click', ()=> btn.closest('.modal-backdrop').classList.remove('open'));
+  });
+  document.querySelectorAll('.modal-backdrop').forEach(bd=>{
+    bd.addEventListener('click', (e)=>{ if(e.target === bd) bd.classList.remove('open'); });
+  });
+
+  // ---------- Segmented controls ----------
+  function wireSeg(segId, onChange){
+    const seg = document.getElementById(segId);
+    seg.querySelectorAll('button').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        seg.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        onChange(btn.dataset.val);
+      });
+    });
+  }
+  let currentType = 'gasto';
+  let currentMethod = 'tarjeta';
+  const methodBtns = document.querySelectorAll('#methodSeg button');
+  wireSeg('typeSeg', (val)=>{
+    currentType = val;
+    document.getElementById('methodLabel').textContent = (val === 'gasto') ? 'Método de pago' : 'Cómo llegó el ingreso';
+    methodBtns[0].textContent = (val === 'gasto') ? 'Tarjeta' : 'Depósito';
+    methodBtns[1].textContent = 'Efectivo';
+  });
+  wireSeg('methodSeg', (val)=> currentMethod = val);
+
+  function populateCategorySelect(){
+    const sel = document.getElementById('categorySelect');
+    sel.innerHTML = state.categories.map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+  }
+
+  // ---------- Abrir modal de movimiento ----------
+  document.getElementById('openAddModal').addEventListener('click', ()=>{
+    populateCategorySelect();
+    document.getElementById('amountInput').value = '';
+    document.getElementById('noteInput').value = '';
+    document.getElementById('dateInput').value = todayISO();
+    currentType='gasto'; currentMethod='tarjeta';
+    document.getElementById('typeSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.val==='gasto'));
+    document.getElementById('methodSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.val==='tarjeta'));
+    document.getElementById('methodLabel').textContent = 'Método de pago';
+    methodBtns[0].textContent = 'Tarjeta';
+    openModal('modalMovimiento');
+  });
+
+  document.getElementById('saveMovBtn').addEventListener('click', ()=>{
+    const amount = parseFloat(document.getElementById('amountInput').value);
+    if(!amount || amount <= 0){ alert('Ingresa un monto válido.'); return; }
+    const tx = {
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      type: currentType,
+      method: currentMethod,
+      amount: amount,
+      category: document.getElementById('categorySelect').value,
+      date: document.getElementById('dateInput').value || todayISO(),
+      note: document.getElementById('noteInput').value.trim()
+    };
+    state.transactions.push(tx);
+    saveState();
+    closeModal('modalMovimiento');
+    renderAll();
+  });
+
+  // ---------- Semana (lunes a domingo) ----------
+  function mondayOf(d){
+    const date = new Date(d);
+    const day = date.getDay(); // 0=domingo
+    const diff = (day === 0) ? -6 : 1 - day;
+    date.setDate(date.getDate() + diff);
+    date.setHours(0,0,0,0);
+    return date;
+  }
+  function isoDate(d){ return d.toISOString().slice(0,10); }
+  function currentWeekInfo(){
+    const monday = mondayOf(new Date());
+    const sunday = new Date(monday);
+    sunday.setDate(sunday.getDate() + 6);
+    return { start: isoDate(monday), end: isoDate(sunday), key: isoDate(monday) };
+  }
+  function txInWeek(t, week){ return t.date >= week.start && t.date <= week.end; }
+
+  // ---------- Categorías ----------
+  function catById(id){ return state.categories.find(c=>c.id===id) || {name:'Sin categoría', color:'#999'}; }
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  document.getElementById('addCatBtn').addEventListener('click', ()=>{
+    document.getElementById('catNameInput').value = '';
+    document.getElementById('catColorInput').value = '#A6612C';
+    openModal('modalCategoria');
+  });
+  document.getElementById('saveCatBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('catNameInput').value.trim();
+    if(!name){ alert('Ponle un nombre a la categoría.'); return; }
+    state.categories.push({
+      id: 'cat_' + Date.now().toString(36),
+      name,
+      color: document.getElementById('catColorInput').value
+    });
+    saveState();
+    closeModal('modalCategoria');
+    renderCategories();
+  });
+
+  function renderCategories(){
+    const list = document.getElementById('catList');
+    list.innerHTML = state.categories.map(c=>`
+      <div class="cat-row" data-id="${c.id}">
+        <span class="swatch-btn" style="background:${c.color}"></span>
+        <input type="text" value="${escapeHtml(c.name)}" data-role="name">
+        <span class="budget-label">tope/sem</span>
+        <input type="number" step="0.01" inputmode="decimal" placeholder="—" value="${state.budgets[c.id] ?? ''}" data-role="budget">
+        <button data-role="del" style="background:none;border:none;color:var(--danger);font-size:15px;cursor:pointer;">&times;</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('.cat-row').forEach(row=>{
+      const id = row.dataset.id;
+      row.querySelector('[data-role=name]').addEventListener('change', (e)=>{
+        const cat = state.categories.find(c=>c.id===id);
+        if(cat){ cat.name = e.target.value.trim() || cat.name; saveState(); renderAll(); }
+      });
+      row.querySelector('[data-role=budget]').addEventListener('change', (e)=>{
+        const val = parseFloat(e.target.value);
+        if(!val || val<=0) delete state.budgets[id];
+        else state.budgets[id] = val;
+        saveState();
+        renderWeek();
+      });
+      row.querySelector('[data-role=del]').addEventListener('click', ()=>{
+        const inUse = state.transactions.some(t=>t.category===id);
+        if(inUse && !confirm('Hay movimientos con esta categoría. ¿Eliminarla de todos modos?')) return;
+        state.categories = state.categories.filter(c=>c.id!==id);
+        delete state.budgets[id];
+        saveState();
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- Metas ----------
+  document.getElementById('addGoalBtn').addEventListener('click', ()=>{
+    document.getElementById('goalNameInput').value = '';
+    document.getElementById('goalTargetInput').value = '';
+    document.getElementById('goalCurrentInput').value = '';
+    openModal('modalMeta');
+  });
+  document.getElementById('saveGoalBtn').addEventListener('click', ()=>{
+    const name = document.getElementById('goalNameInput').value.trim();
+    const target = parseFloat(document.getElementById('goalTargetInput').value);
+    const current = parseFloat(document.getElementById('goalCurrentInput').value) || 0;
+    if(!name || !target || target<=0){ alert('Ponle un nombre y un monto objetivo válido.'); return; }
+    state.goals.push({ id:'goal_'+Date.now().toString(36), name, target, current });
+    saveState();
+    closeModal('modalMeta');
+    renderGoals();
+  });
+
+  let aporteGoalId = null;
+  document.getElementById('saveAporteBtn').addEventListener('click', ()=>{
+    const amount = parseFloat(document.getElementById('aporteInput').value);
+    if(!amount || amount<=0){ alert('Ingresa un monto válido.'); return; }
+    const goal = state.goals.find(g=>g.id===aporteGoalId);
+    if(goal){ goal.current += amount; saveState(); renderGoals(); }
+    closeModal('modalAporte');
+  });
+
+  function renderGoals(){
+    const list = document.getElementById('goalsList');
+    const empty = document.getElementById('goalsEmpty');
+    if(!state.goals.length){ list.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    list.innerHTML = state.goals.map(g=>{
+      const pct = Math.min(100, (g.current/g.target)*100);
+      return `
+      <div class="goal-card" data-id="${g.id}">
+        <div class="goal-top">
+          <span class="goal-name">${escapeHtml(g.name)}</span>
+          <span class="goal-figs">${fmt.format(g.current)} / ${fmt.format(g.target)}</span>
+        </div>
+        <div class="goal-track"><div class="goal-fill" style="width:${pct}%"></div></div>
+        <div class="goal-actions">
+          <button data-role="add">+ Agregar</button>
+          <button data-role="del" class="del">Eliminar</button>
+        </div>
+      </div>`;
+    }).join('');
+    list.querySelectorAll('.goal-card').forEach(card=>{
+      const id = card.dataset.id;
+      card.querySelector('[data-role=add]').addEventListener('click', ()=>{
+        aporteGoalId = id;
+        document.getElementById('aporteInput').value = '';
+        openModal('modalAporte');
+      });
+      card.querySelector('[data-role=del]').addEventListener('click', ()=>{
+        if(!confirm('¿Eliminar esta meta de ahorro?')) return;
+        state.goals = state.goals.filter(g=>g.id!==id);
+        saveState();
+        renderGoals();
+      });
+    });
+  }
+
+  // ---------- Filtros de movimientos ----------
+  let currentFilter = 'todos';
+  document.getElementById('filterRow').addEventListener('click', (e)=>{
+    if(!e.target.classList.contains('filter-chip')) return;
+    document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+    e.target.classList.add('active');
+    currentFilter = e.target.dataset.filter;
+    renderFullLedger();
+  });
+
+  function ledgerRowHtml(tx){
+    const cat = catById(tx.category);
+    const sign = tx.type === 'gasto' ? '−' : '+';
+    const cls = tx.type === 'gasto' ? 'exp' : 'inc';
+    const methodLabel = tx.type === 'gasto'
+      ? (tx.method==='tarjeta'?'Tarjeta':'Efectivo')
+      : (tx.method==='efectivo'?'Efectivo':'Depósito');
+    return `
+    <div class="ledger-row" data-id="${tx.id}">
+      <span class="swatch" style="background:${cat.color}"></span>
+      <div class="details">
+        <div class="cat">${escapeHtml(cat.name)}${tx.note ? ' — '+escapeHtml(tx.note) : ''}</div>
+        <div class="meta">${new Date(tx.date+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})} · ${methodLabel}</div>
+      </div>
+      <div class="amt ${cls}">${sign} ${fmt.format(tx.amount)}</div>
+      <button class="del" data-role="del">&times;</button>
+    </div>`;
+  }
+
+  function renderFullLedger(){
+    const container = document.getElementById('fullLedger');
+    const empty = document.getElementById('fullEmpty');
+    let list = state.transactions.slice().sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+    if(currentFilter !== 'todos') list = list.filter(t=>t.type===currentFilter);
+    if(!list.length){ container.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display='none';
+    container.innerHTML = list.map(ledgerRowHtml).join('');
+    wireDelButtons(container);
+  }
+
+  function renderRecentLedger(){
+    const container = document.getElementById('recentLedger');
+    let list = state.transactions.slice().sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0,6);
+    if(!list.length){ container.innerHTML = '<div class="empty-note">Aún no registras movimientos.</div>'; return; }
+    container.innerHTML = list.map(ledgerRowHtml).join('');
+    wireDelButtons(container);
+  }
+
+  function wireDelButtons(container){
+    container.querySelectorAll('[data-role=del]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const id = btn.closest('.ledger-row').dataset.id;
+        state.transactions = state.transactions.filter(t=>t.id!==id);
+        saveState();
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- Resumen (barras + totales) ----------
+  function currentMonthKey(){ return todayISO().slice(0,7); }
+
+  function renderSummary(){
+    const monthKey = currentMonthKey();
+    const monthTx = state.transactions.filter(t=>t.date.startsWith(monthKey));
+    const income = monthTx.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+    const expense = monthTx.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+    const balance = income - expense;
+
+    const balFig = document.getElementById('balanceFigure');
+    balFig.textContent = fmt.format(balance);
+    balFig.classList.toggle('negative', balance < 0);
+    document.getElementById('miniIncome').textContent = fmt.format(income);
+    document.getElementById('miniExpense').textContent = fmt.format(expense);
+
+    const cardTotal = monthTx.filter(t=>t.type==='gasto' && t.method==='tarjeta').reduce((s,t)=>s+t.amount,0);
+    const cashTotal = monthTx.filter(t=>t.type==='gasto' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
+    document.getElementById('miniMethod').textContent = `${fmt.format(cardTotal)} / ${fmt.format(cashTotal)}`;
+
+    const byCat = {};
+    monthTx.filter(t=>t.type==='gasto').forEach(t=>{
+      byCat[t.category] = (byCat[t.category]||0) + t.amount;
+    });
+    const maxVal = Math.max(1, ...Object.values(byCat));
+    const barList = document.getElementById('barList');
+    const barEmpty = document.getElementById('barEmpty');
+    const entries = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+    if(!entries.length){ barList.innerHTML=''; barEmpty.style.display='block'; }
+    else{
+      barEmpty.style.display='none';
+      barList.innerHTML = entries.map(([catId, val])=>{
+        const cat = catById(catId);
+        const pct = (val/maxVal)*100;
+        return `
+        <div class="bar-row">
+          <div class="bar-label"><span>${escapeHtml(cat.name)}</span><span>${fmt.format(val)}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${cat.color}"></div></div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // ---------- Vista Semana ----------
+  function fmtShort(d){
+    return new Date(d+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+  }
+
+  function renderWeek(){
+    const week = currentWeekInfo();
+    document.getElementById('weekRangeLabel').textContent = `${fmtShort(week.start)} al ${fmtShort(week.end)}`;
+
+    const weekTx = state.transactions.filter(t=>txInWeek(t, week));
+    const income = weekTx.filter(t=>t.type==='ingreso').reduce((s,t)=>s+t.amount,0);
+    const expense = weekTx.filter(t=>t.type==='gasto').reduce((s,t)=>s+t.amount,0);
+    document.getElementById('weekIncome').textContent = fmt.format(income);
+    document.getElementById('weekExpense').textContent = fmt.format(expense);
+
+    // Presupuestos por categoría
+    const budgetIds = Object.keys(state.budgets);
+    const budgetList = document.getElementById('budgetList');
+    const budgetEmpty = document.getElementById('budgetEmpty');
+    let totalSurplus = 0;
+    if(!budgetIds.length){
+      budgetList.innerHTML = '';
+      budgetEmpty.style.display = 'block';
+    } else {
+      budgetEmpty.style.display = 'none';
+      budgetList.innerHTML = budgetIds.map(catId=>{
+        const cat = catById(catId);
+        const budget = state.budgets[catId];
+        const spent = weekTx.filter(t=>t.type==='gasto' && t.category===catId).reduce((s,t)=>s+t.amount,0);
+        const remaining = budget - spent;
+        totalSurplus += Math.max(0, remaining);
+        const pct = Math.min(100, (spent/budget)*100);
+        const over = spent > budget;
+        return `
+        <div class="bar-row">
+          <div class="bar-label">
+            <span>${escapeHtml(cat.name)}</span>
+            <span style="${over ? 'color:var(--danger);' : ''}">${fmt.format(spent)} / ${fmt.format(budget)}${over ? ' · excedido' : ''}</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${over ? 'var(--danger)' : cat.color}"></div></div>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('weekSurplus').textContent = fmt.format(totalSurplus);
+    const assignBtn = document.getElementById('assignSurplusBtn');
+    if(state.assignedWeeks[week.key]){
+      assignBtn.textContent = 'Ya guardaste el sobrante esta semana';
+      assignBtn.disabled = true;
+    } else {
+      assignBtn.textContent = '+ Guardar sobrante en una meta';
+      assignBtn.disabled = totalSurplus <= 0;
+    }
+    assignBtn.dataset.amount = totalSurplus;
+    assignBtn.dataset.weekKey = week.key;
+
+    // Verificación de efectivo
+    document.getElementById('weekCashStartInput').value = state.weekCashStart[week.key] ?? '';
+    const cashIncome = weekTx.filter(t=>t.type==='ingreso' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
+    const cashExpense = weekTx.filter(t=>t.type==='gasto' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
+    const expected = (state.weekCashStart[week.key] || 0) + cashIncome - cashExpense;
+    document.getElementById('expectedCash').textContent = fmt.format(expected);
+    document.getElementById('cashResult').innerHTML = '';
+    document.getElementById('cashCountInput').value = '';
+  }
+
+  document.getElementById('saveWeekCashStartBtn').addEventListener('click', ()=>{
+    const week = currentWeekInfo();
+    const val = parseFloat(document.getElementById('weekCashStartInput').value) || 0;
+    state.weekCashStart[week.key] = val;
+    saveState();
+    renderWeek();
+  });
+
+  document.getElementById('checkCashBtn').addEventListener('click', ()=>{
+    const week = currentWeekInfo();
+    const weekTx = state.transactions.filter(t=>txInWeek(t, week));
+    const cashIncome = weekTx.filter(t=>t.type==='ingreso' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
+    const cashExpense = weekTx.filter(t=>t.type==='gasto' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
+    const expected = (state.weekCashStart[week.key] || 0) + cashIncome - cashExpense;
+    const counted = parseFloat(document.getElementById('cashCountInput').value);
+    const resultBox = document.getElementById('cashResult');
+    if(isNaN(counted)){ resultBox.innerHTML = ''; return; }
+    const diff = counted - expected;
+    if(Math.abs(diff) < 0.01){
+      resultBox.innerHTML = `<span style="color:var(--income);">Cuadra perfecto — nada que ajustar.</span>`;
+    } else if(diff < 0){
+      resultBox.innerHTML = `<span style="color:var(--danger);">Te faltan ${fmt.format(Math.abs(diff))} respecto a lo esperado.</span>
+        <button class="ghost-btn" id="logAdjustBtn" style="margin-top:8px;">Registrar como gasto no identificado</button>`;
+    } else {
+      resultBox.innerHTML = `<span style="color:var(--income);">Tienes ${fmt.format(diff)} de más — quizá falta registrar un ingreso.</span>`;
+    }
+    const adjustBtn = document.getElementById('logAdjustBtn');
+    if(adjustBtn){
+      adjustBtn.addEventListener('click', ()=>{
+        const fallbackCat = state.categories.find(c=>c.id==='otros') || state.categories[0];
+        state.transactions.push({
+          id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+          type: 'gasto',
+          method: 'efectivo',
+          amount: Math.abs(diff),
+          category: fallbackCat ? fallbackCat.id : 'otros',
+          date: todayISO(),
+          note: 'Ajuste — efectivo no identificado'
+        });
+        saveState();
+        renderAll();
+      });
+    }
+  });
+
+  document.getElementById('assignSurplusBtn').addEventListener('click', (e)=>{
+    const amount = parseFloat(e.currentTarget.dataset.amount) || 0;
+    if(amount <= 0 || !state.goals.length){
+      if(!state.goals.length) alert('Primero crea una meta de ahorro en la pestaña Metas.');
+      return;
+    }
+    document.getElementById('surplusAmountInput').value = amount.toFixed(2);
+    const sel = document.getElementById('surplusGoalSelect');
+    sel.innerHTML = state.goals.map(g=>`<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    openModal('modalSurplus');
+  });
+  document.getElementById('confirmSurplusBtn').addEventListener('click', ()=>{
+    const week = currentWeekInfo();
+    const amount = parseFloat(document.getElementById('surplusAmountInput').value);
+    const goalId = document.getElementById('surplusGoalSelect').value;
+    if(!amount || amount<=0){ alert('Ingresa un monto válido.'); return; }
+    const goal = state.goals.find(g=>g.id===goalId);
+    if(goal){ goal.current += amount; }
+    state.assignedWeeks[week.key] = true;
+    saveState();
+    closeModal('modalSurplus');
+    renderAll();
+  });
+
+  // ---------- Exportar / Importar ----------
+  document.getElementById('exportBtn').addEventListener('click', ()=>{
+    const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mis-finanzas-respaldo.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        if(!data.transactions || !data.categories){ throw new Error('Formato inválido'); }
+        if(!confirm('Esto reemplazará tus datos actuales por los del archivo. ¿Continuar?')) return;
+        state = { transactions: data.transactions||[], categories: data.categories||DEFAULT_CATEGORIES.slice(), goals: data.goals||[] };
+        saveState();
+        renderAll();
+      }catch(err){
+        alert('No se pudo leer el archivo. Verifica que sea un respaldo válido.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // ---------- Render general ----------
+  function renderAll(){
+    renderCategories();
+    renderGoals();
+    renderFullLedger();
+    renderRecentLedger();
+    renderSummary();
+    renderWeek();
+  }
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
