@@ -44,11 +44,14 @@
     margin:0 auto;
     min-height:100vh;
     background:var(--paper);
-    padding-bottom:88px;
+    padding-bottom:calc(88px + env(safe-area-inset-bottom));
+    padding-left:env(safe-area-inset-left);
+    padding-right:env(safe-area-inset-right);
   }
   /* Masthead */
   header.masthead{
     padding:28px 20px 18px;
+    padding-top:max(28px, env(safe-area-inset-top));
     border-bottom:1px solid var(--line-strong);
   }
   .masthead-top{
@@ -292,7 +295,7 @@
   /* FAB */
   .fab{
     position:fixed;
-    bottom:22px; left:50%;
+    bottom:max(22px, calc(env(safe-area-inset-bottom) + 12px)); left:50%;
     transform:translateX(-50%);
     width:min(600px, calc(100% - 40px));
     display:flex;
