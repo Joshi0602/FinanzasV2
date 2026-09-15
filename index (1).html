@@ -107,6 +107,7 @@
   /* Tabs */
   nav.tabs{
     display:flex;
+    overflow-x:auto;
     border-bottom:1px solid var(--line-strong);
     background:var(--paper);
     position:sticky;
@@ -114,13 +115,14 @@
     z-index:5;
   }
   nav.tabs button{
-    flex:1;
+    flex:0 0 auto;
+    white-space:nowrap;
     background:none;
     border:none;
     font-family:'IBM Plex Sans', sans-serif;
     font-size:13px;
     color:var(--ink-soft);
-    padding:12px 4px;
+    padding:12px 14px;
     cursor:pointer;
     border-bottom:2px solid transparent;
   }
@@ -380,6 +382,7 @@
   <nav class="tabs">
     <button data-view="resumen" class="active">Resumen</button>
     <button data-view="semana">Semana</button>
+    <button data-view="dia">Cierre diario</button>
     <button data-view="movimientos">Movimientos</button>
     <button data-view="metas">Metas</button>
     <button data-view="categorias">Categorías</button>
@@ -416,6 +419,31 @@
 
     <hr class="divider">
 
+    <h2 class="section-title">Ajustes pendientes de tu depósito</h2>
+    <div id="pendingAdjustmentsCard" style="padding:16px; border:1px solid var(--line-strong); border-radius:6px; background:var(--goal-soft); margin-bottom:20px; display:none;">
+      <div class="bar-row" id="adjUberRow" style="display:none; margin-bottom:10px;">
+        <div class="bar-label"><span>Uber (viajes en efectivo)</span><span id="uberAdjustmentAmount">$0.00</span></div>
+      </div>
+      <div class="bar-row" id="adjLoanRow" style="display:none; margin-bottom:0;">
+        <div class="bar-label"><span>Préstamo</span><span id="loanAdjustmentAmount">$0.00</span></div>
+      </div>
+      <div style="font-size:12px; color:var(--ink-soft); margin-top:8px;">Esto se restará de tu próximo depósito de tarjeta — lo usa el verificador de abajo.</div>
+    </div>
+
+    <h2 class="section-title">Verificar depósito de tarjeta</h2>
+    <div style="font-size:13px; color:var(--ink-soft); margin-bottom:10px;">
+      Acumulado en tarjeta desde tu último depósito confirmado: <b id="tarjetaAccumulated" style="font-family:'IBM Plex Mono',monospace; color:var(--ink);"></b><br>
+      Depósito esperado (ya con ajustes restados): <b id="expectedDeposit" style="font-family:'IBM Plex Mono',monospace; color:var(--ink);"></b>
+    </div>
+    <label class="field">
+      <span>Depósito que te llegó</span>
+      <input type="number" id="depositReceivedInput" step="0.01" inputmode="decimal">
+    </label>
+    <button class="primary-btn" id="checkDepositBtn">Comparar</button>
+    <div id="depositResult" style="margin-top:12px; font-size:14px;"></div>
+
+    <hr class="divider">
+
     <h2 class="section-title">Verificar efectivo</h2>
     <div style="padding:16px; border:1px solid var(--line-strong); border-radius:6px; background:var(--paper-raised); margin-bottom:14px;">
       <label class="field" style="margin-bottom:10px;">
@@ -431,6 +459,32 @@
     </label>
     <button class="primary-btn" id="checkCashBtn">Comparar</button>
     <div id="cashResult" style="margin-top:12px; font-size:14px;"></div>
+  </section>
+
+  <!-- CIERRE DIARIO -->
+  <section class="view" id="view-dia">
+    <h2 class="section-title">Cierre del día</h2>
+    <label class="field">
+      <span>Fecha</span>
+      <input type="date" id="dailyDateInput">
+    </label>
+    <label class="field">
+      <span>Ganancia total del día (la que muestra Uber arriba)</span>
+      <input type="number" id="dailyGrossInput" step="0.01" inputmode="decimal" placeholder="Ej. 1014.52">
+    </label>
+    <button class="primary-btn" id="checkDailyBtn">Comparar</button>
+    <div id="dailyCheckResult" style="margin-top:14px; font-size:14px;"></div>
+
+    <hr class="divider">
+
+    <h2 class="section-title">Descuento del préstamo de hoy</h2>
+    <div style="font-size:12px; color:var(--ink-soft); margin-bottom:10px;" id="loanSuggestionNote"></div>
+    <label class="field">
+      <span>Monto del descuento (ajusta si Uber te muestra el exacto)</span>
+      <input type="number" id="loanAmountInput" step="0.01" inputmode="decimal" placeholder="Ej. 89.00">
+    </label>
+    <button class="primary-btn" id="logLoanBtn">Registrar descuento de hoy</button>
+    <div id="loanLogResult" style="margin-top:10px; font-size:13px; color:var(--ink-soft);"></div>
   </section>
 
   <!-- MOVIMIENTOS -->
@@ -455,6 +509,17 @@
 
   <!-- CATEGORIAS -->
   <section class="view" id="view-categorias">
+    <h2 class="section-title">Préstamo activo</h2>
+    <label class="field">
+      <span>Saldo restante por pagar</span>
+      <input type="number" id="loanBalanceInput" step="0.01" inputmode="decimal" placeholder="Ej. 3500.00">
+    </label>
+    <label class="field">
+      <span>% que te descuenta de tus ganancias del día</span>
+      <input type="number" id="loanPercentInput" step="0.01" inputmode="decimal" placeholder="Ej. 8.7">
+    </label>
+    <button class="ghost-btn" id="saveLoanPercentBtn" style="margin-top:0;">Guardar</button>
+    <hr class="divider">
     <h2 class="section-title">Categorías</h2>
     <div id="catList"></div>
     <button class="ghost-btn" id="addCatBtn">+ Nueva categoría</button>
@@ -493,7 +558,26 @@
         <button type="button" data-val="efectivo">Efectivo</button>
       </div>
     </label>
-    <label class="field">
+    <label class="field" id="uberCashToggleField" style="display:none;">
+      <span style="display:flex; align-items:center; gap:8px; cursor:pointer;" id="uberCashToggleLabel">
+        <input type="checkbox" id="uberCashToggle" style="width:auto;">
+        Viaje de Uber en efectivo (cobraste completo, tu ganancia es menor)
+      </span>
+    </label>
+    <div id="uberCashFields" style="display:none;">
+      <label class="field">
+        <span>Efectivo que cobraste del pasajero</span>
+        <input type="number" id="uberCollectedInput" step="0.01" inputmode="decimal" placeholder="Ej. 139.94">
+      </label>
+      <label class="field">
+        <span>Tu ganancia real (como la muestra Uber)</span>
+        <input type="number" id="uberEarningsInput" step="0.01" inputmode="decimal" placeholder="Ej. 74.48">
+      </label>
+      <div style="font-size:12px; color:var(--ink-soft); margin:-6px 0 14px;">
+        Uber te descontará <b id="uberDiffPreview">$0.00</b> de tu próximo depósito de tarjeta.
+      </div>
+    </div>
+    <label class="field" id="amountField">
       <span>Monto</span>
       <input type="number" id="amountInput" placeholder="0.00" step="0.01" inputmode="decimal">
     </label>
@@ -602,6 +686,7 @@
     {id:"entretenimiento", name:"Entretenimiento", color:"#B4557A"},
     {id:"salud", name:"Salud", color:"#2F6F62"},
     {id:"educacion", name:"Educación", color:"#3D6EA5"},
+    {id:"prestamo", name:"Préstamo", color:"#8B4226"},
     {id:"otros", name:"Otros", color:"#8A8A8A"},
   ];
 
@@ -625,6 +710,12 @@
   if(!state.budgets) state.budgets = {};
   if(!state.weekCashStart) state.weekCashStart = {};
   if(!state.assignedWeeks) state.assignedWeeks = {};
+  if(typeof state.uberPendingAdjustment !== 'number') state.uberPendingAdjustment = 0;
+  if(typeof state.loanPendingAdjustment !== 'number') state.loanPendingAdjustment = 0;
+  if(typeof state.loanPercent !== 'number') state.loanPercent = 0;
+  if(typeof state.loanRemainingBalance !== 'number') state.loanRemainingBalance = 0;
+  if(!state.lastDepositConfirmedAt) state.lastDepositConfirmedAt = null;
+  if(!state.loanLoggedDates) state.loanLoggedDates = {};
 
   const fmt = new Intl.NumberFormat('es-MX', {style:'currency', currency:'MXN'});
   const todayISO = () => new Date().toISOString().slice(0,10);
@@ -666,13 +757,40 @@
   let currentType = 'gasto';
   let currentMethod = 'tarjeta';
   const methodBtns = document.querySelectorAll('#methodSeg button');
+
+  function updateUberToggleVisibility(){
+    const show = (currentType === 'ingreso' && currentMethod === 'efectivo');
+    document.getElementById('uberCashToggleField').style.display = show ? 'block' : 'none';
+    if(!show){
+      document.getElementById('uberCashToggle').checked = false;
+      toggleUberCashFields(false);
+    }
+  }
+  function toggleUberCashFields(on){
+    document.getElementById('uberCashFields').style.display = on ? 'block' : 'none';
+    document.getElementById('amountField').style.display = on ? 'none' : 'block';
+  }
+  document.getElementById('uberCashToggle').addEventListener('change', (e)=> toggleUberCashFields(e.target.checked));
+  function recalcUberDiffPreview(){
+    const collected = parseFloat(document.getElementById('uberCollectedInput').value) || 0;
+    const earnings = parseFloat(document.getElementById('uberEarningsInput').value) || 0;
+    const diff = Math.max(0, collected - earnings);
+    document.getElementById('uberDiffPreview').textContent = fmt.format(diff);
+  }
+  document.getElementById('uberCollectedInput').addEventListener('input', recalcUberDiffPreview);
+  document.getElementById('uberEarningsInput').addEventListener('input', recalcUberDiffPreview);
+
   wireSeg('typeSeg', (val)=>{
     currentType = val;
     document.getElementById('methodLabel').textContent = (val === 'gasto') ? 'Método de pago' : 'Cómo llegó el ingreso';
     methodBtns[0].textContent = (val === 'gasto') ? 'Tarjeta' : 'Depósito';
     methodBtns[1].textContent = 'Efectivo';
+    updateUberToggleVisibility();
   });
-  wireSeg('methodSeg', (val)=> currentMethod = val);
+  wireSeg('methodSeg', (val)=>{
+    currentMethod = val;
+    updateUberToggleVisibility();
+  });
 
   function populateCategorySelect(){
     const sel = document.getElementById('categorySelect');
@@ -690,12 +808,30 @@
     document.getElementById('methodSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('active', b.dataset.val==='tarjeta'));
     document.getElementById('methodLabel').textContent = 'Método de pago';
     methodBtns[0].textContent = 'Tarjeta';
+    document.getElementById('uberCashToggle').checked = false;
+    toggleUberCashFields(false);
+    updateUberToggleVisibility();
+    document.getElementById('uberCollectedInput').value = '';
+    document.getElementById('uberEarningsInput').value = '';
     openModal('modalMovimiento');
   });
 
   document.getElementById('saveMovBtn').addEventListener('click', ()=>{
-    const amount = parseFloat(document.getElementById('amountInput').value);
-    if(!amount || amount <= 0){ alert('Ingresa un monto válido.'); return; }
+    const isUberCash = document.getElementById('uberCashToggle').checked && document.getElementById('uberCashFields').style.display !== 'none';
+    let amount, cashCollected = null, uberDiff = 0;
+
+    if(isUberCash){
+      cashCollected = parseFloat(document.getElementById('uberCollectedInput').value);
+      amount = parseFloat(document.getElementById('uberEarningsInput').value);
+      if(!cashCollected || cashCollected <= 0 || isNaN(amount) || amount < 0){
+        alert('Ingresa el efectivo cobrado y tu ganancia real.'); return;
+      }
+      uberDiff = Math.max(0, cashCollected - amount);
+    } else {
+      amount = parseFloat(document.getElementById('amountInput').value);
+      if(!amount || amount <= 0){ alert('Ingresa un monto válido.'); return; }
+    }
+
     const tx = {
       id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
       type: currentType,
@@ -705,7 +841,11 @@
       date: document.getElementById('dateInput').value || todayISO(),
       note: document.getElementById('noteInput').value.trim()
     };
+    if(cashCollected !== null) tx.cashCollected = cashCollected;
     state.transactions.push(tx);
+    if(uberDiff > 0){
+      state.uberPendingAdjustment += uberDiff;
+    }
     saveState();
     closeModal('modalMovimiento');
     renderAll();
@@ -733,6 +873,15 @@
   function catById(id){ return state.categories.find(c=>c.id===id) || {name:'Sin categoría', color:'#999'}; }
   function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+  document.getElementById('saveLoanPercentBtn').addEventListener('click', ()=>{
+    const pct = parseFloat(document.getElementById('loanPercentInput').value);
+    const balance = parseFloat(document.getElementById('loanBalanceInput').value);
+    state.loanPercent = (!isNaN(pct) && pct >= 0) ? pct : 0;
+    state.loanRemainingBalance = (!isNaN(balance) && balance >= 0) ? balance : 0;
+    saveState();
+    alert('Datos del préstamo guardados.');
+  });
+
   document.getElementById('addCatBtn').addEventListener('click', ()=>{
     document.getElementById('catNameInput').value = '';
     document.getElementById('catColorInput').value = '#A6612C';
@@ -752,6 +901,8 @@
   });
 
   function renderCategories(){
+    document.getElementById('loanPercentInput').value = state.loanPercent || '';
+    document.getElementById('loanBalanceInput').value = state.loanRemainingBalance || '';
     const list = document.getElementById('catList');
     list.innerHTML = state.categories.map(c=>`
       <div class="cat-row" data-id="${c.id}">
@@ -866,12 +1017,13 @@
     const methodLabel = tx.type === 'gasto'
       ? (tx.method==='tarjeta'?'Tarjeta':'Efectivo')
       : (tx.method==='efectivo'?'Efectivo':'Depósito');
+    const uberNote = tx.cashCollected ? ` · cobraste ${fmt.format(tx.cashCollected)}` : '';
     return `
     <div class="ledger-row" data-id="${tx.id}">
       <span class="swatch" style="background:${cat.color}"></span>
       <div class="details">
         <div class="cat">${escapeHtml(cat.name)}${tx.note ? ' — '+escapeHtml(tx.note) : ''}</div>
-        <div class="meta">${new Date(tx.date+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})} · ${methodLabel}</div>
+        <div class="meta">${new Date(tx.date+'T00:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short'})} · ${methodLabel}${uberNote}</div>
       </div>
       <div class="amt ${cls}">${sign} ${fmt.format(tx.amount)}</div>
       <button class="del" data-role="del">&times;</button>
@@ -1008,12 +1160,14 @@
 
     // Verificación de efectivo
     document.getElementById('weekCashStartInput').value = state.weekCashStart[week.key] ?? '';
-    const cashIncome = weekTx.filter(t=>t.type==='ingreso' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
+    const cashIncome = weekTx.filter(t=>t.type==='ingreso' && t.method==='efectivo').reduce((s,t)=>s+(t.cashCollected ?? t.amount),0);
     const cashExpense = weekTx.filter(t=>t.type==='gasto' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
     const expected = (state.weekCashStart[week.key] || 0) + cashIncome - cashExpense;
     document.getElementById('expectedCash').textContent = fmt.format(expected);
     document.getElementById('cashResult').innerHTML = '';
     document.getElementById('cashCountInput').value = '';
+
+    renderDepositCheck();
   }
 
   document.getElementById('saveWeekCashStartBtn').addEventListener('click', ()=>{
@@ -1027,7 +1181,7 @@
   document.getElementById('checkCashBtn').addEventListener('click', ()=>{
     const week = currentWeekInfo();
     const weekTx = state.transactions.filter(t=>txInWeek(t, week));
-    const cashIncome = weekTx.filter(t=>t.type==='ingreso' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
+    const cashIncome = weekTx.filter(t=>t.type==='ingreso' && t.method==='efectivo').reduce((s,t)=>s+(t.cashCollected ?? t.amount),0);
     const cashExpense = weekTx.filter(t=>t.type==='gasto' && t.method==='efectivo').reduce((s,t)=>s+t.amount,0);
     const expected = (state.weekCashStart[week.key] || 0) + cashIncome - cashExpense;
     const counted = parseFloat(document.getElementById('cashCountInput').value);
@@ -1114,6 +1268,125 @@
     };
     reader.readAsText(file);
     e.target.value = '';
+  });
+
+  // ---------- Cierre diario ----------
+  document.getElementById('dailyDateInput').value = todayISO();
+
+  document.getElementById('checkDailyBtn').addEventListener('click', ()=>{
+    const date = document.getElementById('dailyDateInput').value || todayISO();
+    const gross = parseFloat(document.getElementById('dailyGrossInput').value);
+    const resultBox = document.getElementById('dailyCheckResult');
+    if(isNaN(gross) || gross <= 0){ resultBox.innerHTML = ''; return; }
+    const loggedSum = state.transactions
+      .filter(t=>t.type==='ingreso' && t.date===date)
+      .reduce((s,t)=>s+t.amount,0);
+    const diff = gross - loggedSum;
+    if(Math.abs(diff) < 0.01){
+      resultBox.innerHTML = `<span style="color:var(--income);">Cuadra — lo que registraste (${fmt.format(loggedSum)}) coincide con lo que muestra Uber.</span>`;
+    } else if(diff > 0){
+      resultBox.innerHTML = `<span style="color:var(--danger);">Te falta registrar ${fmt.format(diff)} — llevas anotado ${fmt.format(loggedSum)} de ${fmt.format(gross)}.</span>`;
+    } else {
+      resultBox.innerHTML = `<span style="color:var(--danger);">Registraste ${fmt.format(Math.abs(diff))} de más respecto a lo que muestra Uber. Revisa tus movimientos de ese día.</span>`;
+    }
+    // Sugerencia de préstamo basada en el % configurado y el saldo restante
+    const noteBox = document.getElementById('loanSuggestionNote');
+    if(state.loanRemainingBalance <= 0){
+      noteBox.innerHTML = `<span style="color:var(--income);">Ya no debes nada del préstamo — no hace falta registrar más descuentos.</span>`;
+      document.getElementById('loanAmountInput').value = '';
+    } else {
+      let suggestion = state.loanPercent > 0 ? (gross * state.loanPercent / 100) : 0;
+      suggestion = Math.min(suggestion, state.loanRemainingBalance);
+      const capped = state.loanPercent > 0 && (gross * state.loanPercent / 100) > state.loanRemainingBalance;
+      noteBox.textContent = state.loanPercent > 0
+        ? `Con tu ${state.loanPercent}% configurado, se estima ${fmt.format(suggestion)} de descuento hoy${capped ? ' (ajustado porque es tu último pago)' : ''}. Te faltan ${fmt.format(state.loanRemainingBalance)} en total. Ajusta el monto si Uber te muestra el exacto.`
+        : `Configura tu % de préstamo en la pestaña Categorías para que aquí te sugiera un estimado. Te faltan ${fmt.format(state.loanRemainingBalance)} en total.`;
+      document.getElementById('loanAmountInput').value = suggestion > 0 ? suggestion.toFixed(2) : '';
+    }
+  });
+
+  document.getElementById('logLoanBtn').addEventListener('click', ()=>{
+    const date = document.getElementById('dailyDateInput').value || todayISO();
+    let amount = parseFloat(document.getElementById('loanAmountInput').value);
+    const resultBox = document.getElementById('loanLogResult');
+    if(!amount || amount <= 0){ alert('Ingresa un monto válido.'); return; }
+    if(state.loanRemainingBalance > 0 && amount > state.loanRemainingBalance){
+      amount = state.loanRemainingBalance;
+    }
+    if(state.loanLoggedDates[date]){
+      if(!confirm('Ya registraste un descuento de préstamo para este día. ¿Registrar otro de todos modos?')) return;
+    }
+    const fallbackCat = state.categories.find(c=>c.id==='prestamo') || state.categories[0];
+    state.transactions.push({
+      id: 'tx_' + Date.now() + '_' + Math.random().toString(36).slice(2,7),
+      type: 'gasto',
+      method: 'tarjeta',
+      amount: amount,
+      category: fallbackCat.id,
+      date: date,
+      note: 'Descuento de préstamo'
+    });
+    state.loanPendingAdjustment += amount;
+    state.loanRemainingBalance = Math.max(0, state.loanRemainingBalance - amount);
+    state.loanLoggedDates[date] = true;
+    saveState();
+    resultBox.textContent = state.loanRemainingBalance <= 0
+      ? `Registrado. ¡Con esto terminas de pagar tu préstamo! 🎉`
+      : `Registrado. Te faltan ${fmt.format(state.loanRemainingBalance)} del préstamo. Se acumula ${fmt.format(state.loanPendingAdjustment)} pendiente de descontar de tu depósito.`;
+    document.getElementById('loanAmountInput').value = '';
+    renderAll();
+  });
+
+  // ---------- Verificar depósito de tarjeta ----------
+  function renderDepositCheck(){
+    const pendingCard = document.getElementById('pendingAdjustmentsCard');
+    const uberRow = document.getElementById('adjUberRow');
+    const loanRow = document.getElementById('adjLoanRow');
+    const anyPending = state.uberPendingAdjustment > 0 || state.loanPendingAdjustment > 0;
+    pendingCard.style.display = anyPending ? 'block' : 'none';
+    uberRow.style.display = state.uberPendingAdjustment > 0 ? 'block' : 'none';
+    loanRow.style.display = state.loanPendingAdjustment > 0 ? 'block' : 'none';
+    document.getElementById('uberAdjustmentAmount').textContent = fmt.format(state.uberPendingAdjustment);
+    document.getElementById('loanAdjustmentAmount').textContent = fmt.format(state.loanPendingAdjustment);
+
+    const sinceDate = state.lastDepositConfirmedAt;
+    const tarjetaSum = state.transactions
+      .filter(t=>t.type==='ingreso' && t.method==='tarjeta' && (!sinceDate || t.date > sinceDate))
+      .reduce((s,t)=>s+t.amount,0);
+    const expected = tarjetaSum - state.uberPendingAdjustment - state.loanPendingAdjustment;
+    document.getElementById('tarjetaAccumulated').textContent = fmt.format(tarjetaSum);
+    document.getElementById('expectedDeposit').textContent = fmt.format(Math.max(0, expected));
+    document.getElementById('depositResult').innerHTML = '';
+    document.getElementById('depositReceivedInput').value = '';
+  }
+
+  document.getElementById('checkDepositBtn').addEventListener('click', ()=>{
+    const sinceDate = state.lastDepositConfirmedAt;
+    const tarjetaSum = state.transactions
+      .filter(t=>t.type==='ingreso' && t.method==='tarjeta' && (!sinceDate || t.date > sinceDate))
+      .reduce((s,t)=>s+t.amount,0);
+    const expected = tarjetaSum - state.uberPendingAdjustment - state.loanPendingAdjustment;
+    const received = parseFloat(document.getElementById('depositReceivedInput').value);
+    const resultBox = document.getElementById('depositResult');
+    if(isNaN(received)){ resultBox.innerHTML = ''; return; }
+    const diff = received - expected;
+    let html = '';
+    if(Math.abs(diff) < 0.5){
+      html = `<span style="color:var(--income);">Cuadra — tu depósito coincide con lo esperado.</span>`;
+    } else if(diff < 0){
+      html = `<span style="color:var(--danger);">Te llegó ${fmt.format(Math.abs(diff))} menos de lo esperado.</span>`;
+    } else {
+      html = `<span style="color:var(--income);">Te llegó ${fmt.format(diff)} más de lo esperado.</span>`;
+    }
+    html += `<button class="ghost-btn" id="confirmDepositBtn" style="margin-top:10px;">Confirmar depósito recibido</button>`;
+    resultBox.innerHTML = html;
+    document.getElementById('confirmDepositBtn').addEventListener('click', ()=>{
+      state.lastDepositConfirmedAt = todayISO();
+      state.uberPendingAdjustment = 0;
+      state.loanPendingAdjustment = 0;
+      saveState();
+      renderAll();
+    });
   });
 
   // ---------- Render general ----------
